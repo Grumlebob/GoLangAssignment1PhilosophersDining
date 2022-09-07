@@ -93,9 +93,8 @@ func main() {
 }
 
 func (p *philosopher) act(msg int) {
-	//BUG HER - HVORDAN KAN DEN EAT NÅR OWNFORK ALDRIG SÆTTES TIL FALSE
 	(*p).ownFork.inUse = true
-	//Eating -- BUG ER HER. RIGHTFORK.INUSE ER FALSE
+	//Eating
 	if (*p).rightFork.inUse == false && (*p).timesEaten < timesNeededToEat {
 		go func() { //IKKE SIKKER PÅ OM DEN SKAL GO HER
 			(*p).isThinking = false

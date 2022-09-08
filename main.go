@@ -9,7 +9,6 @@ import (
 const numOfPhilosophers = 5
 const timesNeededToEat = 3
 const eatingTime = 2
-const thinkingTime = 1
 
 type philosopher struct {
 	philoChannel chan int
@@ -24,8 +23,8 @@ type philosopher struct {
 type fork struct {
 	inUse        bool
 	id           int
-	forkChannel  chan bool //fork ready = true. Not ready = false /empty
-	forkRunAgain chan bool //Search for fork
+	forkChannel  chan bool //fork ready = true. Not ready = empty
+	forkRunAgain chan bool //Repeat search for own fork
 }
 
 func main() {
@@ -61,42 +60,7 @@ func main() {
 		if philos[0].doneEating && philos[1].doneEating && philos[2].doneEating && philos[3].doneEating && philos[4].doneEating {
 			break
 		}
-		//Check channel message
-		/* OLD WORKING ROUTINE, WITH NO FORK ROUTINE.
-		select {
-		case msg0 := <-philos[0].philoChannel:
-			philoPointer0 := &philos[0]
-			go func() {
-				time.Sleep(1111 * time.Millisecond)
-				philoPointer0.act(msg0)
-			}()
-		case msg1 := <-philos[1].philoChannel:
-			philoPointer1 := &philos[1]
-			go func() {
-				time.Sleep(789 * time.Millisecond)
-				philoPointer1.act(msg1)
-			}()
-		case msg2 := <-philos[2].philoChannel:
-			philoPointer2 := &philos[2]
-			go func() {
-				time.Sleep(653 * time.Millisecond)
-				philoPointer2.act(msg2)
-			}()
-		case msg3 := <-philos[3].philoChannel:
-			philoPointer3 := &philos[3]
-			go func() {
-				time.Sleep(526 * time.Millisecond)
-				philoPointer3.act(msg3)
-			}()
-		case msg4 := <-philos[4].philoChannel:
-			philoPointer4 := &philos[4]
-			go func() {
-				time.Sleep(367 * time.Millisecond)
-				philoPointer4.act(msg4)
-			}()
-		}
-		*/
-		// NEW ROUTINE, WITH FORK ROUTINE.
+		//Start Fork and Philo routines. If fork is ready, signal philosopher.
 		select {
 		case <-forks[0].forkRunAgain:
 			philoPointer := &philos[0]
@@ -116,76 +80,43 @@ func main() {
 		case <-philos[0].philoChannel:
 			philoPointer0 := &philos[0]
 			go func() {
-				time.Sleep(1111 * time.Millisecond)
-				philoPointer0.attemptToGetForks()
+				time.Sleep(413 * time.Millisecond)
+				philoPointer0.GoRoutinePhiloEatOrThink()
 			}()
 		case <-philos[1].philoChannel:
 			philoPointer1 := &philos[1]
 			go func() {
-				time.Sleep(789 * time.Millisecond)
-				philoPointer1.attemptToGetForks()
+				time.Sleep(348 * time.Millisecond)
+				philoPointer1.GoRoutinePhiloEatOrThink()
 			}()
 		case <-philos[2].philoChannel:
 			philoPointer2 := &philos[2]
 			go func() {
-				time.Sleep(653 * time.Millisecond)
-				philoPointer2.attemptToGetForks()
+				time.Sleep(175 * time.Millisecond)
+				philoPointer2.GoRoutinePhiloEatOrThink()
 			}()
 		case <-philos[3].philoChannel:
 			philoPointer3 := &philos[3]
 			go func() {
 				time.Sleep(526 * time.Millisecond)
-				philoPointer3.attemptToGetForks()
+				philoPointer3.GoRoutinePhiloEatOrThink()
 			}()
 		case <-philos[4].philoChannel:
 			philoPointer4 := &philos[4]
 			go func() {
 				time.Sleep(367 * time.Millisecond)
-				philoPointer4.attemptToGetForks()
+				philoPointer4.GoRoutinePhiloEatOrThink()
 			}()
 		}
 	}
-	fmt.Println("Everyone is full and ate:", timesNeededToEat, " times")
-}
-
-func (p *philosopher) act(msg int) {
-	(*p).ownFork.inUse = true
-	//Eating
-	if (*p).rightFork.inUse == false && (*p).timesEaten < timesNeededToEat {
-		go func() {
-			(*p).isThinking = false
-			(*p).rightFork.inUse = true
-			(*p).timesEaten++
-			fmt.Println("philo: ", (*p).id, " is eating. Times eaten:", (*p).timesEaten)
-			if (*p).timesEaten == 3 {
-				(*p).doneEating = true
-				fmt.Println("philo: ", (*p).id, " is is full of food")
-			}
-			randomPause(eatingTime)
-			(*p).ownFork.inUse = false
-			(*p).rightFork.inUse = false
-			//fmt.Println("philo: ", (*p).id, " is done eating")
-		}()
-		//Thinking
-	} else {
-		go func() {
-			if !(*p).isThinking {
-				fmt.Println("philo: ", (*p).id, " is thinking.")
-			}
-			(*p).ownFork.inUse = false
-			randomPause(thinkingTime)
-			(*p).isThinking = true
-		}()
-	}
-	(*p).philoChannel <- (*p).id
+	fmt.Println("Everyone is full and ate:", timesNeededToEat, "times")
 }
 
 func randomPause(max int) { //Fra https://github.com/iokhamafe/Golang/blob/master/diningphilosophers.go
-	time.Sleep(time.Millisecond * time.Duration(rand.Intn(max*1000)+100))
+	time.Sleep(time.Millisecond * time.Duration(rand.Intn(max*1000)+50))
 }
 
 func (p *philosopher) goRoutineForForks() {
-	//KIGGER PÅ EGEN KNIV. NÅR DEN ER LEDIG, SIGNALER EGEN PHILOSOPHER.
 	waitingTime := make(chan bool, 1)
 	go func() {
 		randomPause(1)
@@ -196,37 +127,32 @@ func (p *philosopher) goRoutineForForks() {
 	case <-(*p).ownFork.forkChannel: //Own fork is ready - announce to philosopher to attempt to eat.
 		(*p).ownFork.forkChannel <- true
 		(*p).philoChannel <- (*p).id
-	case <-waitingTime: //Own fork ikke ready - prøv igen.
+	case <-waitingTime: //Own fork not ready, try again.
 		(*p).ownFork.forkRunAgain <- true
 	}
 
 }
 
-func (p *philosopher) attemptToGetForks() {
-	//KIGGER PÅ SIDEMANDS KNIV. HVIS LEDIG SÅ SPIS. ELLERS TÆNK OG LÆG EGEN KNIV LEDIG.
-	//<-(*p).ownFork.forkChannel
+func (p *philosopher) GoRoutinePhiloEatOrThink() {
 	waitingTime := make(chan bool, 1)
 	go func() {
 		randomPause(2)
 		waitingTime <- true
 	}()
-	//Vi holder egen fork i op til 1 sek.
-
-	//Hvis vi kan tage naboens, holder vi begge længere.
-	//Hvis ikke så lægger vi den ned. Og begynder at tænke, mens andre kan snuppe.
+	//We got a channel msg that our own fork is ready, therefore check if other fork is ready, if so eat otherwise think.
 	select {
-	case <-(*p).rightFork.forkChannel: //Hvis vores nabo er ledige
-		<-(*p).ownFork.forkChannel //tag begge knive
+	case <-(*p).rightFork.forkChannel:
+		<-(*p).ownFork.forkChannel //pickup both forks.
 		(*p).eat()
-		(*p).returnForks() //p eller (*p) her?
-	case <-waitingTime: //hvis nabo fork ikke er ledige, så tænker vi
+		(*p).returnForks()
+	case <-waitingTime:
 		(*p).think()
 		(*p).ownFork.forkChannel <- true
 	}
-
 }
 
 func (p *philosopher) returnForks() {
+	//Make both forks ready, and signal fork routine. It is the go fork routine, that signals the philosophers back.
 	(*p).ownFork.forkChannel <- true
 	(*p).rightFork.forkChannel <- true
 	(*p).ownFork.forkRunAgain <- true
@@ -234,23 +160,25 @@ func (p *philosopher) returnForks() {
 }
 
 func (p *philosopher) eat() {
+	//If we ate 3 times, just return.
 	if (*p).doneEating {
-		(*p).returnForks()
 		return
 	}
 	(*p).isThinking = false
 	(*p).timesEaten++
 	fmt.Println("philo: ", (*p).id, " is eating. Times eaten:", (*p).timesEaten)
-	if (*p).timesEaten >= 3 {
+	if (*p).timesEaten >= timesNeededToEat {
 		(*p).doneEating = true
-		fmt.Println("philo: ", (*p).id, " is is full of food")
+		fmt.Println("philo: ", (*p).id, " is full of food")
 	}
 	randomPause(eatingTime)
+	fmt.Println("philo: ", (*p).id, " is done eating")
 }
 
 func (p *philosopher) think() {
+	//Only print thinking once, untill next time we eat.
 	if !(*p).isThinking {
-		fmt.Println("philo: ", (*p).id, " is thinking.")
+		fmt.Println("philo: ", (*p).id, " is now thinking untill next bite.")
 	}
 	(*p).isThinking = true
 }

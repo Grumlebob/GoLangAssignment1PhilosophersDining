@@ -21,8 +21,6 @@ type philosopher struct {
 }
 
 type fork struct {
-	inUse        bool
-	id           int
 	forkChannel  chan bool //fork ready = true. Not ready = empty
 	forkRunAgain chan bool //Repeat search for own fork
 }
@@ -31,8 +29,6 @@ func main() {
 	//Create forks
 	forks := make([]fork, numOfPhilosophers)
 	for i := range forks {
-		forks[i].id = i
-		forks[i].inUse = false
 		forks[i].forkChannel = make(chan (bool), 1)
 		forks[i].forkRunAgain = make(chan (bool), 1)
 		forks[i].forkChannel <- true
@@ -47,16 +43,12 @@ func main() {
 		philos[j].timesEaten = 0
 		philos[j].doneEating = false
 		philos[j].philoChannel = make(chan (int), 1)
-	}
-	//Signals all channels, that philos are ready to act
-	for p := range philos {
-		philoPointer := &philos[p]
-		philoPointer.philoChannel <- p
+		philos[j].philoChannel <- j
 	}
 
 	//Repeat routine.
 	for {
-		//If everyone ate 3 times, break
+		//If everyone ate 3 times exit loop
 		if philos[0].doneEating && philos[1].doneEating && philos[2].doneEating && philos[3].doneEating && philos[4].doneEating {
 			break
 		}

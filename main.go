@@ -22,8 +22,9 @@ type philosopher struct {
 }
 
 type fork struct {
-	inUse bool
-	id    int
+	inUse       bool
+	id          int
+	forkChannel chan bool //ready = true. Not ready = false
 }
 
 func main() {
@@ -126,4 +127,27 @@ func (p *philosopher) act(msg int) {
 
 func randomPause(max int) { //Fra https://github.com/iokhamafe/Golang/blob/master/diningphilosophers.go
 	time.Sleep(time.Millisecond * time.Duration(rand.Intn(max*1000)+100))
+}
+
+func (p *philosopher) returnForks() {
+	(*p).ownFork.forkChannel <- true
+	(*p).rightFork.forkChannel <- true
+	//ISTEDET FOR AT HAVE OWN FORK IN USE TRUE. SÅ BARE LAVE <- OWN FORK CHANNEL. Fordi det drainer beskeden, for at vise den er snuppet
+}
+
+func (p *philosopher) attemptToGetForks() {
+	waitingTime := make(chan bool, 1)
+	go func() {
+		randomPause(2)
+		waitingTime <- true
+	}()
+
+	select {
+	case <-(*p).rightFork.forkChannel: //Hvis vores nabo er ledige
+		//eat
+		(*p).returnForks()
+	case <-waitingTime: //hvis nabo ikke er ledige, så tænker vi
+		//think
+	}
+
 }
